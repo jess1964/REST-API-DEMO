@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.cameraiq.technology.directory.Mapper.Mapper">
+
+    <!-- I will be treating this as a MySQL DB-->
+    <select id="isDataBaseActive" resultType="java.lang.String">
+              <![CDATA[ SELECT 'true']]>
+    </select>
+
+    <!--EMAIL ADDRESS IS UNIQUE TO USER-->
+    <select id="doesUserExist" resultType="int" parameterType="com.cameraiq.technology.directory.Objects.Users">
+      <![CDATA[
+          SELECT count(1) FROM Users
+          where upper(email) = upper(#{email})
+        ]]>
+    </select>
+
+    <insert id="createUser" parameterType="com.cameraiq.technology.directory.Objects.Users">
+        <![CDATA[
+        insert into Users
+        (First_Name, Last_name, Email, Address, Phone)
+        values(upper(#{firstName}),upper(#{lastName}),upper(#{email}),upper(#{address}),upper(#{phone}))
+        ]]>
+    </insert>
+
+    <insert id="createOrg" parameterType="com.cameraiq.technology.directory.Objects.Organizations">
+        <![CDATA[
+        insert into organizations
+        (Name, Address, Phone)
+        values(upper(#{name}),upper(#{address}),upper(#{phone}))
+        ]]>
+    </insert>
+
+    <!--COMPANY NAME IS UNIQUE DUE TO COPYRIGHT LAWS-->
+    <select id="doesOrgExist" resultType="int" parameterType="com.cameraiq.technology.directory.Objects.Organizations">
+      <![CDATA[
+          SELECT count(1) FROM organizations
+          where upper(name) = upper(#{name})
+        ]]>
+    </select>
+
+    <select id="isUserInOrg" resultType="int">
+    <![CDATA[
+        SELECT count(1) FROM Users us
+        left join roles rl on rl.user_id = us.id
+        left join organizations oz on rl.org_id = oz.id
+        where upper(us.email) = upper(#{email}) and upper(oz.name)=upper(#{org})
+    ]]>
+</select>
+
+    <insert id="addUserToOrg" >
+        <![CDATA[
+        insert into roles
+        (user_id,org_id,user_role,creation_date,creation_datetime,last_update_date,last_update_datetime)
+        values ((SELECT id FROM Users where upper(email) = upper(#{email})),
+                (SELECT id FROM organizations where upper(name) = upper(#{org})),
+                null,
+                curdate(),
+                sysdate(),
+                curdate(),
+                sysdate())
+        ]]>
+    </insert>
+
+    <delete id="removeUsersFromOrg">
+        <![CDATA[
+        delete
+        from roles
+        where user_id in (select id
+                          from Users
+                          where upper(email) = upper(#{email}))
+        and org_id in (select id
+                          from organizations
+                          where upper(name) = upper(#{org}))
+        ]]>
+    </delete>
+
+    <select id="printAllUsersInOrg" resultType="com.cameraiq.technology.directory.Objects.Users">
+        <![CDATA[
+           SELECT us.First_Name as firstName,us.Last_name as lastName,us.Email as email,us.Address as address,us.Phone as phone
+            FROM Users us
+            left join roles rl on rl.user_id = us.id
+            left join organizations oz on rl.org_id = oz.id
+            where upper(oz.Name) =  upper(#{org})
+        ]]>
+    </select>
+
+    <select id="printAllOrgsWithUser" resultType="com.cameraiq.technology.directory.Objects.Organizations">
+        SELECT  oz.Name as name, oz.Address as address, oz.Phone as phone
+        FROM organizations oz
+        left join roles rl on rl.user_id = oz.id
+        left join Users us on rl.org_id = us.id
+        where upper(us.Email) =  upper(#{email})
+    </select>
+
+</mapper>
